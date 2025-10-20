@@ -29,5 +29,5 @@ function verifySignature(signature, secret, payload) {
 
 module.exports = {
   generateSignature,
-  verifySignature,
+  verifySignature
 };

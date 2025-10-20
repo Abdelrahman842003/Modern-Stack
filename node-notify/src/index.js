@@ -21,7 +21,7 @@ app.use(express.json());
 // Signature verification middleware
 const verifySignature = (req, res, next) => {
   const signature = req.headers['x-signature'];
-  
+
   if (!signature) {
     return res.status(401).json({
       error: {
@@ -32,10 +32,10 @@ const verifySignature = (req, res, next) => {
   }
 
   const body = JSON.stringify(req.body);
-  const expectedSignature = 'sha256=' + crypto
+  const expectedSignature = `sha256=${crypto
     .createHmac('sha256', WEBHOOK_SECRET)
     .update(body)
-    .digest('hex');
+    .digest('hex')}`;
 
   if (signature !== expectedSignature) {
     console.error('Invalid signature:', {
@@ -61,32 +61,34 @@ app.get('/health', (req, res) => {
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    service: 'task-notification-service'
+    service: 'task-notification-service',
   });
 });
 
 // Receive notification
 app.post('/notify', verifySignature, (req, res) => {
-  const { user_id, task_id, message, timestamp } = req.body;
+  const {
+    userId, taskId, message, timestamp
+  } = req.body;
 
   // Validation
-  if (!user_id || !task_id || !message || !timestamp) {
+  if (!userId || !taskId || !message || !timestamp) {
     return res.status(400).json({
       error: {
         code: 'INVALID_PAYLOAD',
-        message: 'Missing required fields: user_id, task_id, message, timestamp'
-      }
+        message: 'Missing required fields: userId, taskId, message, timestamp',
+      },
     });
   }
 
   // Store notification
   const notification = {
     id: notifications.length + 1,
-    user_id,
-    task_id,
+    userId,
+    taskId,
     message,
     timestamp,
-    received_at: new Date().toISOString()
+    received_at: new Date().toISOString(),
   };
 
   notifications.push(notification);
@@ -96,8 +98,8 @@ app.post('/notify', verifySignature, (req, res) => {
   res.status(201).json({
     data: {
       message: 'Notification received successfully',
-      notification_id: notification.id
-    }
+      notification_id: notification.id,
+    },
   });
 });
 
@@ -122,7 +124,7 @@ app.use((req, res) => {
 });
 
 // Error handler
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   console.error('Error:', err);
   res.status(500).json({
     error: {
