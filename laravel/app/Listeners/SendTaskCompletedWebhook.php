@@ -30,7 +30,7 @@ class SendTaskCompletedWebhook
             return;
         }
 
-        $signature = 'sha256='.hash_hmac(
+        $signature = 'sha256=' . hash_hmac(
             'sha256',
             $jsonPayload,
             config('services.webhook.secret')
