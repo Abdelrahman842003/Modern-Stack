@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'webhook' => [
+        'url' => env('NODE_NOTIFY_URL', 'http://node-notify:3001/notify'),
+        'secret' => env('WEBHOOK_SECRET', 'super-secret-webhook-key-change-in-production'),
+    ],
+
 ];

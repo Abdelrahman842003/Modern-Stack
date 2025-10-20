@@ -75,6 +75,14 @@ jobs:
         working-directory: ./laravel
         run: php artisan migrate --force
 
+      - name: Run Laravel Pint (Code Style)
+        working-directory: ./laravel
+        run: ./vendor/bin/pint --test
+
+      - name: Run PHPStan (Static Analysis)
+        working-directory: ./laravel
+        run: ./vendor/bin/phpstan analyse --memory-limit=2G
+
       - name: Run tests
         working-directory: ./laravel
         run: php artisan test
@@ -101,6 +109,10 @@ jobs:
       - name: Install dependencies
         working-directory: ./node-notify
         run: npm ci
+
+      - name: Run ESLint (Code Style)
+        working-directory: ./node-notify
+        run: npm run lint
 
       - name: Run tests
         working-directory: ./node-notify

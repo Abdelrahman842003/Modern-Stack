@@ -70,6 +70,10 @@ tinker: ## Open Laravel Tinker
 artisan: ## Run artisan command (e.g., make artisan route:list)
 	docker compose exec laravel-app php artisan $(filter-out $@,$(MAKECMDGOALS))
 
+docs: ## Generate API documentation (OpenAPI/Swagger)
+	docker compose exec laravel-app php artisan l5-swagger:generate
+	@echo "✅ API documentation generated! Visit: http://localhost:8000/api/documentation"
+
 # Testing
 test: ## Run all tests (Laravel + Node.js)
 	@echo "Running Laravel tests..."
