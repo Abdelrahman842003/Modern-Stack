@@ -1,0 +1,97 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: task-api-postgres
+    environment:
+      POSTGRES_DB: task_management
+      POSTGRES_USER: taskuser
+      POSTGRES_PASSWORD: taskpass
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - task-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskuser -d task_management"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7.2-alpine
+    container_name: task-api-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - task-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Laravel Application
+  laravel-app:
+    build:
+      context: ./laravel
+      dockerfile: ../docker/laravel.Dockerfile
+    container_name: task-api-laravel
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./laravel:/var/www/html
+      - laravel_vendor:/var/www/html/vendor
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=task_management
+      - DB_USERNAME=taskuser
+      - DB_PASSWORD=taskpass
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - NODE_NOTIFY_URL=http://node-notify:3001/notify
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - task-network
+    command: php artisan serve --host=0.0.0.0 --port=8000
+
+  # Node.js Notification Service
+  node-notify:
+    build:
+      context: ./node-notify
+      dockerfile: ../docker/node.Dockerfile
+    container_name: task-api-node
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./node-notify:/app
+      - node_modules:/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - WEBHOOK_SECRET=super-secret-webhook-key-change-in-production
+    networks:
+      - task-network
+    command: npm run dev
+
+networks:
+  task-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  laravel_vendor:
+  node_modules:
