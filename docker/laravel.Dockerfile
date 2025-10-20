@@ -37,17 +37,11 @@ RUN composer --version
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy composer files first (for better caching)
-COPY composer.json composer.lock ./
-
-# Install dependencies (without dev for production-like setup)
-RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --optimize-autoloader || true
-
 # Copy application files
 COPY . .
 
-# Generate autoload files
-RUN composer dump-autoload --optimize || true
+# Install all dependencies with scripts
+RUN composer install --prefer-dist --optimize-autoloader
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \

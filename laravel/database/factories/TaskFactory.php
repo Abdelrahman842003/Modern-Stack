@@ -50,10 +50,10 @@ class TaskFactory extends Factory
     /**
      * Indicate that the task has a due date.
      */
-    public function withDueDate(): static
+    public function withDueDate($date = null): static
     {
         return $this->state(fn(array $attributes) => [
-            'due_date' => fake()->dateTimeBetween('now', '+3 months'),
+            'due_date' => $date ?? fake()->dateTimeBetween('now', '+3 months'),
         ]);
     }
 

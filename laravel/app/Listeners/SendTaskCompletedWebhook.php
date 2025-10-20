@@ -3,14 +3,11 @@
 namespace App\Listeners;
 
 use App\Events\TaskCompleted;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class SendTaskCompletedWebhook implements ShouldQueue
+class SendTaskCompletedWebhook
 {
-    use InteractsWithQueue;
 
     /**
      * Handle the event.

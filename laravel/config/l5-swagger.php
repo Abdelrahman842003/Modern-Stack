@@ -125,7 +125,7 @@ return [
             /*
              * Scan recursively through subdirectories
              */
-            'open_api_spec_version' => env('L5_SWAGGER_OPEN_API_SPEC_VERSION', \OpenApi\Annotations\OpenApi::VERSION_3_1_0),
+            'open_api_spec_version' => env('L5_SWAGGER_OPEN_API_SPEC_VERSION', '3.1.0'),
         ],
 
         /*

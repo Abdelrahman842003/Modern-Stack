@@ -98,7 +98,8 @@ describe('User Login', function () {
             'password' => 'wrong-password',
         ]);
 
-        $response->assertStatus(401);
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['email']);
     });
 
     it('fails to login with non-existent email', function () {
@@ -107,7 +108,8 @@ describe('User Login', function () {
             'password' => 'password123',
         ]);
 
-        $response->assertStatus(401);
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['email']);
     });
 });
 

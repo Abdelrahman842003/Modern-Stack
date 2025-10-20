@@ -35,6 +35,15 @@ class Task extends Model
     ];
 
     /**
+     * The model's default values for attributes.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'status' => self::STATUS_PENDING,
+    ];
+
+    /**
      * The possible status values.
      */
     public const STATUS_PENDING = 'pending';
