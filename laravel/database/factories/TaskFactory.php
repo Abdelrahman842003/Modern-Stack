@@ -32,7 +32,7 @@ class TaskFactory extends Factory
      */
     public function pending(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'status' => Task::STATUS_PENDING,
         ]);
     }
@@ -42,17 +42,19 @@ class TaskFactory extends Factory
      */
     public function done(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'status' => Task::STATUS_DONE,
         ]);
     }
 
     /**
      * Indicate that the task has a due date.
+     *
+     * @param  mixed  $date
      */
     public function withDueDate($date = null): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'due_date' => $date ?? fake()->dateTimeBetween('now', '+3 months'),
         ]);
     }
@@ -62,7 +64,7 @@ class TaskFactory extends Factory
      */
     public function withoutDueDate(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'due_date' => null,
         ]);
     }

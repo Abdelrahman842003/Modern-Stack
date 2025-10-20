@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
  *     title="Task Management API",
  *     version="1.0.0",
  *     description="Production-grade Task Management API with authentication, CRUD operations, and webhook notifications",
+ *
  *     @OA\Contact(
  *         email="support@taskapi.example.com"
  *     )
@@ -29,7 +30,6 @@ namespace App\Http\Controllers;
  *     name="Authentication",
  *     description="User authentication endpoints"
  * )
- *
  * @OA\Tag(
  *     name="Tasks",
  *     description="Task management endpoints"

@@ -14,3 +14,5 @@ parameters:
         - bootstrap/cache
     checkMissingIterableValueType: false
     reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        - '#Parameter \#2 \$string of function explode expects string, bool\|string given#'

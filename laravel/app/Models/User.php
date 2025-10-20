@@ -50,6 +50,8 @@ class User extends Authenticatable
 
     /**
      * Get the tasks for the user.
+     *
+     * @return HasMany<Task, $this>
      */
     public function tasks(): HasMany
     {

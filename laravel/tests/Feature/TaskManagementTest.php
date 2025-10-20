@@ -124,7 +124,7 @@ describe('Task Retrieval', function () {
         Task::factory()->withDueDate(now()->addDays(25))->create(['user_id' => $this->user->id]);
 
         $response = $this->withHeader('Authorization', "Bearer {$this->token}")
-            ->getJson('/api/tasks?due_from=' . now()->addDays(10)->format('Y-m-d') . '&due_to=' . now()->addDays(20)->format('Y-m-d'));
+            ->getJson('/api/tasks?due_from='.now()->addDays(10)->format('Y-m-d').'&due_to='.now()->addDays(20)->format('Y-m-d'));
 
         $response->assertStatus(200)
             ->assertJsonCount(1, 'data');

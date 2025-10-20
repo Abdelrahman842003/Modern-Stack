@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Builder;
 
 class Task extends Model
 {
+    /** @use HasFactory<\Database\Factories\TaskFactory> */
     use HasFactory, SoftDeletes;
 
     /**
@@ -47,10 +48,13 @@ class Task extends Model
      * The possible status values.
      */
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_DONE = 'done';
 
     /**
      * Get the user that owns the task.
+     *
+     * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo
     {
@@ -59,6 +63,9 @@ class Task extends Model
 
     /**
      * Scope a query to only include pending tasks.
+     *
+     * @param  Builder<Task>  $query
+     * @return Builder<Task>
      */
     public function scopePending(Builder $query): Builder
     {
@@ -67,6 +74,9 @@ class Task extends Model
 
     /**
      * Scope a query to only include done tasks.
+     *
+     * @param  Builder<Task>  $query
+     * @return Builder<Task>
      */
     public function scopeDone(Builder $query): Builder
     {
@@ -74,9 +84,12 @@ class Task extends Model
     }
 
     /**
-     * Scope a query to filter by status.
+     * Scope a query to filter tasks by status.
+     *
+     * @param  Builder<Task>  $query
+     * @return Builder<Task>
      */
-    public function scopeFilterByStatus(Builder $query, ?string $status): Builder
+    public function scopeFilterByStatus(Builder $query, ?string $status = null): Builder
     {
         if ($status && in_array($status, [self::STATUS_PENDING, self::STATUS_DONE])) {
             return $query->where('status', $status);
@@ -87,6 +100,9 @@ class Task extends Model
 
     /**
      * Scope a query to filter by due date range.
+     *
+     * @param  Builder<Task>  $query
+     * @return Builder<Task>
      */
     public function scopeFilterByDueDateRange(Builder $query, ?string $dueFrom, ?string $dueTo): Builder
     {

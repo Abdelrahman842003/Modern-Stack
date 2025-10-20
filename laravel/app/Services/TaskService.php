@@ -6,12 +6,13 @@ use App\Events\TaskCompleted;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Collection;
 
 class TaskService
 {
     /**
      * Get paginated tasks for a user with optional filters.
+     *
+     * @return LengthAwarePaginator<Task>
      */
     public function getUserTasks(
         User $user,
@@ -47,7 +48,7 @@ class TaskService
     /**
      * Update a task.
      */
-    public function updateTask(Task $task, array $data): Task
+    public function updateTask(Task $task, array $data): ?Task
     {
         $task->update($data);
 
@@ -57,7 +58,7 @@ class TaskService
     /**
      * Delete a task (soft delete).
      */
-    public function deleteTask(Task $task): bool
+    public function deleteTask(Task $task): ?bool
     {
         return $task->delete();
     }
@@ -65,13 +66,16 @@ class TaskService
     /**
      * Mark a task as completed.
      */
-    public function markTaskAsComplete(Task $task): Task
+    public function markTaskAsComplete(Task $task): ?Task
     {
         $task->markAsDone();
 
         // Dispatch event for webhook notification
-        TaskCompleted::dispatch($task->fresh());
+        $freshTask = $task->fresh();
+        if ($freshTask) {
+            TaskCompleted::dispatch($freshTask);
+        }
 
-        return $task->fresh();
+        return $freshTask;
     }
 }

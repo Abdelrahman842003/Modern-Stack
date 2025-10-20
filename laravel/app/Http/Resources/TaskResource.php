@@ -2,9 +2,13 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin Task
+ */
 class TaskResource extends JsonResource
 {
     /**
@@ -22,8 +26,8 @@ class TaskResource extends JsonResource
             'status' => $this->status,
             'is_pending' => $this->isPending(),
             'is_done' => $this->isDone(),
-            'created_at' => $this->created_at->toISOString(),
-            'updated_at' => $this->updated_at->toISOString(),
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
             'user' => new UserResource($this->whenLoaded('user')),
         ];
     }

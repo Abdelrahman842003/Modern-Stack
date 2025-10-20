@@ -9,12 +9,11 @@ trait ApiResponseTrait
     /**
      * Generate a standardized API response.
      *
-     * @param int $code HTTP status code
-     * @param string|null $message Response message
-     * @param mixed|null $errors Error details (array or null)
-     * @param mixed|null $data Response data
-     * @param array|null $meta Additional metadata (pagination, timing, etc.)
-     * @return JsonResponse
+     * @param  int  $code  HTTP status code
+     * @param  string|null  $message  Response message
+     * @param  mixed|null  $errors  Error details (array or null)
+     * @param  mixed|null  $data  Response data
+     * @param  array|null  $meta  Additional metadata (pagination, timing, etc.)
      */
     public function apiResponse(
         int $code = 200,
@@ -31,17 +30,17 @@ trait ApiResponseTrait
         ];
 
         // Add errors if they exist
-        if (!is_null($errors)) {
+        if (! is_null($errors)) {
             $response['errors'] = $errors;
         }
 
         // Add data if it exists
-        if (!is_null($data)) {
+        if (! is_null($data)) {
             $response['data'] = $data;
         }
 
         // Add metadata if exists (pagination, request_id, etc.)
-        if (!is_null($meta)) {
+        if (! is_null($meta)) {
             $response['meta'] = $meta;
         }
 
@@ -50,6 +49,8 @@ trait ApiResponseTrait
 
     /**
      * Generate a success response.
+     *
+     * @param  mixed  $data
      */
     public function successResponse(
         $data = null,
@@ -62,6 +63,8 @@ trait ApiResponseTrait
 
     /**
      * Generate an error response.
+     *
+     * @param  mixed  $errors
      */
     public function errorResponse(
         string $message = 'Error',

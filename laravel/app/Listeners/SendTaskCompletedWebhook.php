@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Log;
 
 class SendTaskCompletedWebhook
 {
-
     /**
      * Handle the event.
      */
@@ -25,7 +24,13 @@ class SendTaskCompletedWebhook
         ];
 
         $jsonPayload = json_encode($payload);
-        $signature = 'sha256=' . hash_hmac(
+        if ($jsonPayload === false) {
+            Log::error('Failed to encode payload to JSON', ['task_id' => $task->id]);
+
+            return;
+        }
+
+        $signature = 'sha256='.hash_hmac(
             'sha256',
             $jsonPayload,
             config('services.webhook.secret')

@@ -17,13 +17,10 @@ class AuthController extends Controller
 
     /**
      * Create a new controller instance
-     *
-     * @param AuthService $authService
      */
     public function __construct(
         protected AuthService $authService
-    ) {
-    }
+    ) {}
 
     /**
      * @OA\Post(
@@ -31,20 +28,26 @@ class AuthController extends Controller
      *     tags={"Authentication"},
      *     summary="Register a new user",
      *     description="Create a new user account and receive an authentication token",
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"name","email","password","password_confirmation"},
+     *
      *             @OA\Property(property="name", type="string", example="John Doe"),
      *             @OA\Property(property="email", type="string", format="email", example="john@example.com"),
      *             @OA\Property(property="password", type="string", format="password", example="password123"),
      *             @OA\Property(property="password_confirmation", type="string", format="password", example="password123")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="User registered successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="user", type="object",
      *                     @OA\Property(property="id", type="integer", example=1),
@@ -56,10 +59,13 @@ class AuthController extends Controller
      *             @OA\Property(property="message", type="string", example="User registered successfully")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="error", type="object",
      *                 @OA\Property(property="code", type="string", example="VALIDATION_ERROR"),
      *                 @OA\Property(property="message", type="string", example="The given data was invalid"),
@@ -89,18 +95,24 @@ class AuthController extends Controller
      *     tags={"Authentication"},
      *     summary="Login user",
      *     description="Authenticate user and receive token",
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"email","password"},
+     *
      *             @OA\Property(property="email", type="string", format="email", example="john@example.com"),
      *             @OA\Property(property="password", type="string", format="password", example="password123")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Logged in successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="user", type="object",
      *                     @OA\Property(property="id", type="integer", example=1),
@@ -112,10 +124,13 @@ class AuthController extends Controller
      *             @OA\Property(property="message", type="string", example="Logged in successfully")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Invalid credentials",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="error", type="object",
      *                 @OA\Property(property="code", type="string", example="UNAUTHORIZED"),
      *                 @OA\Property(property="message", type="string", example="The provided credentials are incorrect")
@@ -149,17 +164,23 @@ class AuthController extends Controller
      *     summary="Logout user",
      *     description="Revoke the current access token",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Logged out successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="message", type="string", example="Logged out successfully")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthenticated",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="error", type="object",
      *                 @OA\Property(property="code", type="string", example="UNAUTHENTICATED"),
      *                 @OA\Property(property="message", type="string", example="Unauthenticated")
@@ -170,10 +191,14 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $this->authService->logout(
-            $request->user(),
-            $request->user()->currentAccessToken()->id
-        );
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        /** @phpstan-ignore-next-line */
+        $token = $user->currentAccessToken();
+        /** @phpstan-ignore-next-line */
+        $tokenId = $token ? (string) $token->id : '';
+
+        $this->authService->logout($user, $tokenId);
 
         return $this->successResponse(null, 'Logged out successfully');
     }
@@ -185,10 +210,13 @@ class AuthController extends Controller
      *     summary="Get authenticated user",
      *     description="Get the currently authenticated user's information",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(
      *         response=200,
      *         description="User information retrieved successfully",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="data", type="object",
      *                 @OA\Property(property="id", type="integer", example=1),
      *                 @OA\Property(property="name", type="string", example="John Doe"),
@@ -196,10 +224,13 @@ class AuthController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=401,
      *         description="Unauthenticated",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="error", type="object",
      *                 @OA\Property(property="code", type="string", example="UNAUTHENTICATED"),
      *                 @OA\Property(property="message", type="string", example="Unauthenticated")
