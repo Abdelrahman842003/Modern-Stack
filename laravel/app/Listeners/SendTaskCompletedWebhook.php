@@ -30,7 +30,7 @@ class SendTaskCompletedWebhook
             return;
         }
 
-        $signature = 'sha256='.hash_hmac(
+        $signature = 'sha256=' . hash_hmac(
             'sha256',
             $jsonPayload,
             config('services.webhook.secret')
@@ -64,7 +64,7 @@ class SendTaskCompletedWebhook
             ]);
 
             // Don't throw in testing/local environments where webhook service might not be available
-            if (! app()->environment(['testing', 'local'])) {
+            if (!app()->environment(['testing', 'local'])) {
                 throw $e;
             }
         }
