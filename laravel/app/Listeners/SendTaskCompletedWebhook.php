@@ -17,8 +17,8 @@ class SendTaskCompletedWebhook
         $task->load('user');
 
         $payload = [
-            'user_id' => $task->user_id,
-            'task_id' => $task->id,
+            'userId' => $task->user_id,
+            'taskId' => $task->id,
             'message' => "Task '{$task->title}' has been completed",
             'timestamp' => now()->toIso8601String(),
         ];
@@ -42,7 +42,8 @@ class SendTaskCompletedWebhook
                 'X-Signature' => $signature,
             ])
                 ->timeout(5)
-                ->post(config('services.webhook.url'), $payload);
+                ->withBody($jsonPayload, 'application/json')
+                ->post(config('services.webhook.url'));
 
             if ($response->successful()) {
                 Log::info('Webhook sent successfully', [

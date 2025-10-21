@@ -105,11 +105,112 @@ app.post('/notify', verifySignature, (req, res) => {
 
 // Get all notifications
 app.get('/notifications', (req, res) => {
+  const { userId, status } = req.query;
+  
+  let filteredNotifications = notifications;
+  
+  // Filter by userId if provided
+  if (userId) {
+    filteredNotifications = filteredNotifications.filter(
+      n => n.userId == userId
+    );
+  }
+  
+  // Filter by status if provided
+  if (status) {
+    filteredNotifications = filteredNotifications.filter(
+      n => n.status === status
+    );
+  }
+  
   res.json({
-    data: notifications,
+    data: filteredNotifications,
     meta: {
-      total: notifications.length
+      total: filteredNotifications.length
     }
+  });
+});
+
+// Get notification by ID
+app.get('/notifications/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const notification = notifications.find(n => n.id === id);
+  
+  if (!notification) {
+    return res.status(404).json({
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Notification not found'
+      }
+    });
+  }
+  
+  res.json({
+    data: notification
+  });
+});
+
+// Delete all notifications
+app.delete('/notifications', (req, res) => {
+  const count = notifications.length;
+  notifications.length = 0;  // Clear array
+  
+  console.log(`🗑️  Deleted ${count} notifications`);
+  
+  res.json({
+    data: {
+      message: `${count} notification(s) deleted successfully`,
+      deleted_count: count
+    }
+  });
+});
+
+// Delete notification by ID
+app.delete('/notifications/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const index = notifications.findIndex(n => n.id === id);
+  
+  if (index === -1) {
+    return res.status(404).json({
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Notification not found'
+      }
+    });
+  }
+  
+  const deleted = notifications.splice(index, 1)[0];
+  console.log(`🗑️  Deleted notification #${id}`);
+  
+  res.json({
+    data: {
+      message: 'Notification deleted successfully',
+      deleted: deleted
+    }
+  });
+});
+
+// Mark notification as read
+app.patch('/notifications/:id/read', (req, res) => {
+  const id = parseInt(req.params.id);
+  const notification = notifications.find(n => n.id === id);
+  
+  if (!notification) {
+    return res.status(404).json({
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Notification not found'
+      }
+    });
+  }
+  
+  notification.status = 'read';
+  notification.read_at = new Date().toISOString();
+  
+  console.log(`✅ Notification #${id} marked as read`);
+  
+  res.json({
+    data: notification
   });
 });
 
