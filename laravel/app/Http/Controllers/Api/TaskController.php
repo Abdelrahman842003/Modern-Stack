@@ -18,8 +18,7 @@ class TaskController extends Controller
 
     public function __construct(
         protected TaskService $taskService
-    ) {
-    }
+    ) {}
 
     /**
      * @OA\Get(
@@ -221,7 +220,7 @@ class TaskController extends Controller
 
         $task = $this->taskService->getUserTask($user, $id);
 
-        if (!$task) {
+        if (! $task) {
             return $this->errorResponse(
                 'Task not found',
                 null,
@@ -274,7 +273,7 @@ class TaskController extends Controller
 
         $task = $this->taskService->getUserTask($user, $id);
 
-        if (!$task) {
+        if (! $task) {
             return $this->errorResponse(
                 'Task not found',
                 null,
@@ -317,7 +316,7 @@ class TaskController extends Controller
 
         $task = $this->taskService->getUserTask($user, $id);
 
-        if (!$task) {
+        if (! $task) {
             return $this->errorResponse(
                 'Task not found',
                 null,
@@ -374,7 +373,7 @@ class TaskController extends Controller
 
         $task = $this->taskService->getUserTask($user, $id);
 
-        if (!$task) {
+        if (! $task) {
             return $this->errorResponse(
                 'Task not found',
                 null,

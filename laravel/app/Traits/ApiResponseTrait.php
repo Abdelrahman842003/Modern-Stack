@@ -30,17 +30,17 @@ trait ApiResponseTrait
         ];
 
         // Add errors if they exist
-        if (!is_null($errors)) {
+        if (! is_null($errors)) {
             $response['errors'] = $errors;
         }
 
         // Add data if it exists
-        if (!is_null($data)) {
+        if (! is_null($data)) {
             $response['data'] = $data;
         }
 
         // Add metadata if exists (pagination, request_id, etc.)
-        if (!is_null($meta)) {
+        if (! is_null($meta)) {
             $response['meta'] = $meta;
         }
 
