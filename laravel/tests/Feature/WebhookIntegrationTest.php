@@ -14,7 +14,6 @@ class WebhookIntegrationTest extends TestCase
 
     public function test_task_completion_sends_webhook_to_node_service(): void
     {
-        // Fake HTTP responses
         Http::fake([
             'http://node-notify:3001/notify' => Http::response([
                 'data' => [
@@ -40,7 +39,6 @@ class WebhookIntegrationTest extends TestCase
             'data' => ['id', 'title', 'status'],
         ]);
 
-        // Verify webhook was sent
         Http::assertSent(function ($request) use ($task) {
             return $request->url() === 'http://node-notify:3001/notify'
                 && $request->hasHeader('X-Signature')
@@ -72,15 +70,13 @@ class WebhookIntegrationTest extends TestCase
             config('services.webhook.secret')
         );
 
-        // This test verifies the signature generation is correct
         $this->assertNotEmpty($validSignature);
         $this->assertStringStartsWith('sha256=', $validSignature);
-        $this->assertEquals(71, strlen($validSignature)); // sha256= + 64 chars
+        $this->assertEquals(71, strlen($validSignature));
     }
 
     public function test_webhook_retry_on_failure(): void
     {
-        // Mock successful response after retries
         Http::fake([
             'http://node-notify:3001/notify' => Http::response([
                 'data' => ['message' => 'Success', 'notification_id' => 1],
@@ -98,7 +94,6 @@ class WebhookIntegrationTest extends TestCase
 
         $response->assertOk();
 
-        // Verify webhook was sent
         Http::assertSent(function ($request) {
             return $request->url() === 'http://node-notify:3001/notify'
                 && $request->hasHeader('X-Signature');
@@ -107,7 +102,6 @@ class WebhookIntegrationTest extends TestCase
 
     public function test_webhook_handles_http_client_retry(): void
     {
-        // Test that HTTP client has retry configured
         Http::fake([
             'http://node-notify:3001/notify' => Http::response([
                 'data' => ['message' => 'Success', 'notification_id' => 1],
@@ -125,7 +119,6 @@ class WebhookIntegrationTest extends TestCase
 
         $response->assertOk();
 
-        // Verify request has retry headers configured
         Http::assertSent(function ($request) {
             return $request->hasHeader('X-Attempt')
                 && $request->url() === 'http://node-notify:3001/notify';
@@ -134,14 +127,12 @@ class WebhookIntegrationTest extends TestCase
 
     public function test_circuit_breaker_prevents_excessive_calls(): void
     {
-        // Simulate circuit breaker opening after failures
         Http::fake([
             'http://node-notify:3001/notify' => Http::response(['error' => 'Service down'], 503),
         ]);
 
         $user = User::factory()->create();
 
-        // Create multiple tasks to trigger circuit breaker
         for ($i = 0; $i < 6; $i++) {
             $task = Task::factory()->create([
                 'user_id' => $user->id,
@@ -152,12 +143,11 @@ class WebhookIntegrationTest extends TestCase
                 $this->actingAs($user)
                     ->postJson("/api/tasks/{$task->id}/complete");
             } catch (\Exception $e) {
-                // Expected to fail
+                // Expected
             }
         }
 
-        // Circuit should be open after 5 failures
-        $this->assertTrue(true); // Test passes if no exception
+        $this->assertTrue(true);
     }
 
     public function test_cache_invalidation_on_task_update(): void
@@ -165,18 +155,15 @@ class WebhookIntegrationTest extends TestCase
         $user = User::factory()->create();
         $task = Task::factory()->create(['user_id' => $user->id]);
 
-        // First request (caches data)
         $response1 = $this->actingAs($user)->getJson('/api/tasks');
         $response1->assertOk();
 
-        // Update task
         $updateResponse = $this->actingAs($user)->putJson("/api/tasks/{$task->id}", [
             'title' => 'Updated Title',
         ]);
         $updateResponse->assertOk();
         $updateResponse->assertJsonFragment(['title' => 'Updated Title']);
 
-        // Second request (should get fresh data, not cached)
         $response2 = $this->actingAs($user)->getJson('/api/tasks');
         $response2->assertOk();
         $response2->assertJsonFragment(['title' => 'Updated Title']);
@@ -187,12 +174,10 @@ class WebhookIntegrationTest extends TestCase
         $user = User::factory()->create();
         Task::factory()->count(5)->create(['user_id' => $user->id]);
 
-        // First request
         $startTime1 = microtime(true);
         $response1 = $this->actingAs($user)->getJson('/api/tasks');
         $time1 = microtime(true) - $startTime1;
 
-        // Second request (cached)
         $startTime2 = microtime(true);
         $response2 = $this->actingAs($user)->getJson('/api/tasks');
         $time2 = microtime(true) - $startTime2;
@@ -200,7 +185,6 @@ class WebhookIntegrationTest extends TestCase
         $response1->assertOk();
         $response2->assertOk();
 
-        // Cached request should be faster (though this might be flaky)
         $this->assertEquals($response1->json('data'), $response2->json('data'));
     }
 }
