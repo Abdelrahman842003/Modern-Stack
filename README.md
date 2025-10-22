@@ -1,26 +1,35 @@
 # 📋 Task Management API - Modern Stack
 
-**RESTful API** لإدارة المهام مع Laravel 11 + Node.js Microservice + Docker
+**Production-grade RESTful API** لإدارة المهام مع Laravel 11 + Node.js Microservice + Docker
+
+[![Tests](https://img.shields.io/badge/Tests-69%20Passing-success?style=flat-square)](#-الاختبارات)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)](#-التشغيل-السريع)
+
+## 📦 Resources
+
+- **📋 [Project Requirements](task.pdf)** - Full evaluation task specifications
+- **🔥 [Postman Collection](Task-Management-API-Updated.postman_collection.json)** - Complete API endpoints
 
 ## 🎯 المميزات
 
 ✅ Laravel 11 + PostgreSQL + Redis  
 ✅ Node.js Microservice للإشعارات  
-✅ HMAC Webhook Security  
-✅ 73 اختبار (Pest + Jest)  
+✅ HMAC Webhook Security + Idempotency  
+✅ 69 اختبار (60 Pest + 9 Jest)  
 ✅ Docker Compose جاهز  
-✅ CI/CD Pipeline
+✅ PHPStan Level 8 + Laravel Pint
 
 ## 🚀 التقنيات
 
 **Backend:** PHP 8.3, Laravel 11, Sanctum, PostgreSQL 16, Redis 7.2  
-**Microservice:** Node.js 20, Express 5, HMAC-SHA256  
-**Testing:** Pest (52 tests), Jest (21 tests), PHPStan Level 8  
-**DevOps:** Docker Compose, GitHub Actions, Makefile
+**Microservice:** Node.js 20, Express, HMAC-SHA256, Idempotency  
+**Testing:** Pest (60 tests), Jest (9 tests), PHPStan Level 8  
+**DevOps:** Docker Compose, Makefile
 
 ---
 
-## 🏗️ المعمارية والـ Flow الكامل
+## 🏗️ المعمارية
 
 ### 📐 System Architecture
 
@@ -178,15 +187,17 @@ Client          Laravel              Database         Node.js Service
   │               │     {userId, taskId, message}            │
   │               │                     │                    │
   │               │                     │         Middleware │
-  │               │                     │      • CORS        │
-  │               │                     │      • Helmet      │
   │               │                     │      • verifySignature
   │               │                     │        Calculate HMAC
   │               │                     │        Compare Signatures
   │               │                     │                    │
-  │               │                     │         ✅ Valid   │
-  │               │                     │         Store Notification
-  │               │                     │         in Memory Array
+  │               │                     │      🔐 Idempotency Check
+  │               │                     │      webhook:{userId}:{taskId}
+  │               │                     │      If duplicate → Return 200
+  │               │                     │                    │
+  │               │                     │         ✅ Valid & Unique
+  │               │                     │         Store in Redis
+  │               │                     │         TTL: 600s
   │               │                     │                    │
   │               │◄────Response 200─────────────────────────┤
   │               │     {success: true} │                    │
@@ -380,13 +391,13 @@ GET http://localhost:3001/notifications
 ## 🧪 الاختبارات
 
 ```bash
-# كل الاختبارات (73 test)
+# كل الاختبارات (69 test)
 make test
 
-# Laravel فقط (52 test)
+# Laravel فقط (60 test)
 make test-laravel
 
-# Node.js فقط (21 test)
+# Node.js فقط (9 test)
 make test-node
 
 # مع Coverage
@@ -426,6 +437,7 @@ make db-shell          # PostgreSQL Shell
 
 ✅ **Sanctum Token Auth** - Personal Access Tokens  
 ✅ **HMAC Signatures** - SHA-256 للـ Webhooks  
+✅ **Idempotency Keys** - منع الإشعارات المكررة  
 ✅ **Request Validation** - Form Request Classes  
 ✅ **Rate Limiting** - 60 req/min (API), 10 req/min (Auth)  
 ✅ **SQL Injection Protection** - Eloquent ORM  
@@ -501,18 +513,31 @@ curl http://localhost:3001/notifications
 
 ---
 
-## 🚀 CI/CD
+## � Documentation & Testing
 
-**GitHub Actions** تشغل تلقائياً عند كل Push:
+### Postman Collection
+استيراد [`Task-Management-API-Updated.postman_collection.json`](Task-Management-API-Updated.postman_collection.json) إلى Postman للحصول على:
+- ✅ جميع الـ Endpoints (Authentication, Tasks, Node.js Service)
+- ✅ Environment Variables تلقائية
+- ✅ أمثلة جاهزة للتجربة
+- ✅ Test Scripts
 
-✅ Laravel Pint (Code Style)  
-✅ PHPStan Level 8 (Static Analysis)  
-✅ Pest Tests (52 tests)  
-✅ ESLint (Airbnb Style)  
-✅ Jest Tests (21 tests)  
-✅ Docker Build
+### Project Requirements
+راجع [`task.pdf`](task.pdf) للاطلاع على:
+- 📋 المتطلبات الكاملة للمشروع
+- 🎯 معايير التقييم
+- 🏗️ المواصفات التقنية المطلوبة
 
-**النتائج الحالية:** ✅ All Passing
+---
+
+## 🎯 Code Quality
+
+✅ Laravel Pint (PSR-12)  
+✅ PHPStan Level 8  
+✅ 60 Pest Tests (Laravel)  
+✅ 9 Jest Tests (Node.js)  
+✅ Zero Console Logs  
+✅ Production-Ready
 
 ---
 
@@ -543,36 +568,6 @@ CORS_ORIGIN=http://localhost:8000
 
 ---
 
-## 🤝 المساهمة
-
-```bash
-# Fork → Clone → Branch
-git checkout -b feature/amazing-feature
-
-# Code + Tests
-make test
-make lint
-
-# Commit + Push
-git commit -m "✨ Add feature"
-git push origin feature/amazing-feature
-
-# Open Pull Request
-```
-
-**المعايير:**
-- PSR-12 (Laravel) + Airbnb (Node.js)
-- اختبارات لكل Feature
-- CI يجب أن يمر بنجاح
-
----
-
-## 📄 License
-
-MIT License
-
----
-
 ## 👨‍💻 المطور
 
 **Abdelrahman**  
@@ -590,8 +585,5 @@ MIT License
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7.2-DC382D?style=flat-square&logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)
-
-[![Tests](https://img.shields.io/badge/Tests-73%20Passing-success?style=flat-square)](https://github.com/Abdelrahman842003/Modern-Stack)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
 </div>
