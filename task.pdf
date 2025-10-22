@@ -1,0 +1,242 @@
+# PHP Backend Developer Evaluation Task (Modern Stack)
+
+## Objective
+Build a small, production-grade Task Management API using Laravel with a lightweight Node.js notification microservice. Deliver clean code, tests, CI, containerization, API documentation, and a short demo video.
+
+## Tech Stack and Versions (pin to these)
+- PHP: 8.3.x
+- Laravel: 11.x
+- Composer: 2.7.x
+- Node.js: 20.x (LTS)
+- npm: 10.x
+- PostgreSQL: 16.x
+- Redis: 7.2.x
+- Docker: 24+ and Docker Compose v2
+- OpenAPI: 3.1
+- PHP testing and tooling:
+  - Pest: 3.x (tests)
+  - PHPStan: level 8 (static analysis)
+  - Laravel Pint: latest (code style)
+- Node.js testing:
+  - Jest 29.x or 30.x and Supertest
+- API docs:
+  - l5-swagger (Laravel) or a standalone OpenAPI 3.1 YAML + Swagger UI/Redoc
+
+Optional tooling (bonus):
+- Makefile or task runner
+- Pre-commit hooks (e.g., pre-commit, CaptainHook, or simple Git hooks)
+- K6 or Artillery for a tiny load test
+
+---
+
+## Scope
+
+### 1) Laravel Backend (Core)
+Implement a RESTful API to manage tasks for authenticated users.
+
+Entities:
+- User
+- Task: id, user_id, title, description, due_date (nullable), status (enum: pending|done), created_at, updated_at, deleted_at (soft delete)
+
+Required features:
+- Auth: Token-based via Laravel Sanctum
+- CRUD on tasks
+  - Users can only access their own tasks
+  - Validation for all inputs
+- Mark task as done endpoint
+  - When status transitions to done, emit a signed webhook to the Node.js service
+- Filtering and pagination
+  - Query by status and due_date range; paginate results
+- Consistent API responses using Laravel API Resources
+- Data seeding for demo users and tasks
+- Use Eloquent with:
+  - Model factories
+  - Query scopes where appropriate
+  - Soft deletes enabled for Task
+
+Non-functional:
+- Security:
+  - Input validation
+  - Rate limiting (Laravel throttle middleware)
+  - CORS configuration
+  - Signed webhooks to Node.js using HMAC (shared secret)
+- Observability:
+  - Structured JSON logs (to stdout)
+  - Request/response logging (avoid sensitive data)
+- Performance:
+  - N+1 query protection (use eager loading where relevant)
+  - Proper DB indexes (e.g., user_id, status, due_date)
+
+Code organization:
+- Controllers (thin) + Services (business logic)
+- Form Requests for validation
+- API Resources for output
+- Events/Listeners (TaskCompleted → Webhook dispatch)
+- Configuration via .env and .env.example
+
+Testing (Pest):
+- Feature tests for all endpoints (happy and error paths)
+- Unit tests for services and policies/guards
+- Use in-memory SQLite or test DB with migrations
+
+Documentation:
+- OpenAPI 3.1 with examples and schemas
+- Include auth flows and error formats
+
+### 2) Node.js Notification Microservice
+A minimal Express-based service that receives notifications about completed tasks.
+
+Endpoints:
+- POST /notify
+  - Body: { user_id: string|number, task_id: string|number, message: string, timestamp: ISO8601 }
+  - Validate payload and verify HMAC signature header (e.g., X-Signature: sha256=…)
+  - Store notifications in memory (array) and log to stdout
+- GET /notifications
+  - Returns all notifications received since start
+- GET /health
+  - Simple OK response for health checks
+
+Testing (Jest + Supertest):
+- Unit tests for signature verification and validation
+- Integration tests for endpoints
+
+### 3) Delivery & Demo
+- Dockerized setup for both services and dependencies:
+  - Services: laravel-app, node-notify, postgres, redis
+  - Expose backend on http://localhost:8000 and Node service on http://localhost:3001
+- GitHub Actions CI:
+  - PHP: install deps, lint (Pint), static analysis (PHPStan), tests (Pest)
+  - Node: install deps, lint (eslint), tests (Jest)
+- OpenAPI docs accessible locally (Swagger UI)
+- Postman/Insomnia collection OR simple cURL script in README
+- 3–5 minute video (Loom/YouTube) showing:
+  - Boot via docker compose
+  - Register/login, create tasks, list with filters, mark as done
+  - Node service receiving the signed webhook
+  - Tests and CI passing
+  - Brief code walkthrough and decisions
+
+---
+
+## Acceptance Criteria (must-haves)
+- Endpoints implemented with correct behavior and authorization
+- Signed webhook from Laravel to Node, verified in Node
+- Docker compose up builds and runs all services
+- Tests pass locally and in CI
+- OpenAPI docs complete and accurate
+- README with copy-paste setup steps; .env.example provided
+
+---
+
+## Suggested API Design
+
+Auth:
+- POST /api/register
+- POST /api/login
+- POST /api/logout
+
+Tasks:
+- GET /api/tasks?status=pending|done&due_from=YYYY-MM-DD&due_to=YYYY-MM-DD&page=1
+- POST /api/tasks
+- GET /api/tasks/{id}
+- PUT /api/tasks/{id}
+- DELETE /api/tasks/{id}
+- POST /api/tasks/{id}/complete
+
+Responses:
+- Use a consistent envelope:
+  - Success: { data, meta? }
+  - Error: { error: { code, message, details? } }
+
+Webhook:
+- URL: http://node-notify:3001/notify (service name in Docker network)
+- Headers: Content-Type: application/json, X-Signature: sha256=…
+- Body: { user_id, task_id, message, timestamp }
+
+HMAC signature:
+- signature = 'sha256=' + hex(hmac_sha256(shared_secret, raw_body))
+
+---
+
+## Project Structure (example)
+- laravel/ (Laravel app)
+  - app/Http/Controllers, Requests, Resources
+  - app/Services, app/Events, app/Listeners
+  - database/migrations, seeders, factories
+  - tests/Feature, tests/Unit
+- node-notify/ (Express app)
+  - src/index.ts|js, src/routes, src/middleware, src/services
+  - tests/
+- docker/
+  - docker-compose.yml
+  - app Dockerfiles
+- .github/workflows/
+  - ci.yml
+- README.md
+- openapi.yaml
+
+---
+
+## Setup (high level)
+- Copy .env.example to .env for Laravel; set DB, Redis, SANCTUM, WEBHOOK_SECRET, NODE_NOTIFY_URL
+- For Node, use .env with WEBHOOK_SECRET
+- docker compose up -d --build
+- Run migrations and seeders:
+  - docker compose exec laravel-app php artisan migrate --seed
+- Access:
+  - Laravel API: http://localhost:8000
+  - Swagger UI (if enabled): http://localhost:8000/api/documentation
+  - Node notify: http://localhost:3001/health
+
+---
+
+## Evaluation Matrix (100 points)
+
+| Area | Weight | Excellent (Full) | Good | Fair | Poor |
+|---|---:|---|---|---|---|
+| API correctness & completeness | 25 | All endpoints, filters, pagination, auth, soft deletes work; strict HTTP codes and errors | Minor gaps or edge cases | Several missing features or incorrect behaviors | Major functionality missing |
+| Code quality & architecture | 15 | Clean layering (Controllers→Services), Form Requests, Resources; readable, SOLID; minimal duplication | Generally clean with minor smells | Mixed responsibilities; ad-hoc logic | Spaghetti, hard to follow |
+| Security | 10 | Sanctum done right, rate limits, CORS, validation, signed webhook with HMAC verification | Minor misconfig or missing headers | HMAC present but flawed or missing throttling | Major security gaps |
+| Testing (PHP + Node) | 15 | Comprehensive unit + feature/integration; good coverage; deterministic | Solid but missing some edge cases | Minimal happy-path tests | Little or no testing |
+| Documentation (OpenAPI + README) | 10 | Accurate OpenAPI 3.1, examples, auth flows; README is copy-paste runnable | Mostly accurate; minor omissions | Partial docs; hard to follow setup | Sparse or incorrect |
+| DevOps (Docker + CI) | 10 | Docker works cold-start; CI runs lint, static analysis, tests; status badges | Works with minor issues | Flaky or manual steps required | Non-functional |
+| Node microservice integration | 10 | Correct signature verification; robust validation; observable; tests | Works with minor issues | Works but missing verification or tests | Unreliable or absent |
+| Performance & DB design | 5 | Proper indexes; avoids N+1; efficient queries | Minor inefficiencies | Noticeable inefficiencies | Poor DB or query hygiene |
+| Demo video & communication | 10 | Clear, concise, hits all criteria; reasoning explained | Clear but misses a point | Hard to follow | Missing |
+
+Total: 100
+
+Minimum pass recommendation: 70+
+
+---
+
+## Bonus (extra credit)
+- GitHub Actions builds Docker images and/or caches deps
+- Makefile tasks (make up, make test, make lint, make ci)
+- K6 or Artillery quick script to hit GET /api/tasks and mark complete
+- Health and readiness probes for both services
+- Configurable retry with exponential backoff for webhook delivery
+- Idempotency keys for POST endpoints
+
+---
+
+## Submission Checklist
+- Repository link (public or collaborator access)
+- Running Docker Compose with one command
+- OpenAPI 3.1 (YAML/JSON) included and served via Swagger UI
+- CI status passing
+- Video link (Loom/YouTube)
+- README including:
+  - Prereqs and setup
+  - Env variables and secrets
+  - API usage examples (curl/Postman)
+  - Test and CI instructions
+  - Design decisions and trade-offs
+
+---
+
+## Timebox
+- Suggested: 6–8 hours of focused effort
+- It’s OK to leave placeholders; document trade-offs and what you’d improve with more time
+
+Good luck! We’re looking for pragmatic, secure, and maintainable solutions that are easy to run and reason about.
