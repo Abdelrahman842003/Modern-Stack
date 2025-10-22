@@ -110,7 +110,7 @@ class CircuitBreakerService
     {
         $lastFailureTime = Cache::get($this->getLastFailureTimeKey());
 
-        if (! $lastFailureTime) {
+        if (!$lastFailureTime) {
             return true;
         }
 
