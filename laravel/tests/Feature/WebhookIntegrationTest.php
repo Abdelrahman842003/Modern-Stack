@@ -64,7 +64,7 @@ class WebhookIntegrationTest extends TestCase
         ];
 
         $jsonPayload = json_encode($payload);
-        $validSignature = 'sha256=' . hash_hmac(
+        $validSignature = 'sha256='.hash_hmac(
             'sha256',
             $jsonPayload,
             config('services.webhook.secret')
