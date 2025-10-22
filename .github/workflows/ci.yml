@@ -98,6 +98,10 @@ jobs:
         working-directory: ./laravel
         run: ./vendor/bin/phpstan analyse --memory-limit=2G
 
+      - name: Generate testing app key
+        working-directory: ./laravel
+        run: php artisan key:generate --env=testing
+
       - name: Run tests
         working-directory: ./laravel
         run: php artisan test
