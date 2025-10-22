@@ -571,7 +571,7 @@ CORS_ORIGIN=http://localhost:8000
 ## 👨‍💻 المطور
 
 **Abdelrahman**  
-📧 [abdelrahman842003@gmail.com](mailto:abdelrahman842003@gmail.com)  
+📧 [aeid38858@gmail.com](mailto:aeid38858@gmail.com)  
 🐙 [@Abdelrahman842003](https://github.com/Abdelrahman842003)
 
 ---
