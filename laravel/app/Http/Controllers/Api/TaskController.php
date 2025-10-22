@@ -19,8 +19,7 @@ class TaskController extends Controller
 
     public function __construct(
         protected TaskService $taskService
-    ) {
-    }
+    ) {}
 
     /**
      * @OA\Get(
@@ -113,10 +112,11 @@ class TaskController extends Controller
         $user = $request->user();
 
         // Generate cache key based on user and filters
+        $filterParams = $request->only(['status', 'due_from', 'due_to', 'per_page', 'page']);
         $cacheKey = sprintf(
             'user:%d:tasks:%s',
             $user->id,
-            md5(json_encode($request->only(['status', 'due_from', 'due_to', 'per_page', 'page'])))
+            md5((string) json_encode($filterParams))
         );
 
         // Cache for 5 minutes (300 seconds)
@@ -239,7 +239,7 @@ class TaskController extends Controller
             return $this->taskService->getUserTask($user, $id);
         });
 
-        if (!$task) {
+        if (! $task) {
             return $this->errorResponse(
                 'Task not found',
                 null,
@@ -292,7 +292,7 @@ class TaskController extends Controller
 
         $task = $this->taskService->getUserTask($user, $id);
 
-        if (!$task) {
+        if (! $task) {
             return $this->errorResponse(
                 'Task not found',
                 null,
@@ -339,7 +339,7 @@ class TaskController extends Controller
 
         $task = $this->taskService->getUserTask($user, $id);
 
-        if (!$task) {
+        if (! $task) {
             return $this->errorResponse(
                 'Task not found',
                 null,
@@ -400,7 +400,7 @@ class TaskController extends Controller
 
         $task = $this->taskService->getUserTask($user, $id);
 
-        if (!$task) {
+        if (! $task) {
             return $this->errorResponse(
                 'Task not found',
                 null,
@@ -440,6 +440,7 @@ class TaskController extends Controller
             // For array cache driver (used in tests), just flush all cache
             // since we can't use pattern matching
             Cache::flush();
+
             return;
         }
 
@@ -450,12 +451,14 @@ class TaskController extends Controller
 
         // Clear all possible cache keys for user's task lists using Redis
         try {
-            $redis = Cache::getRedis();
+            /** @var \Illuminate\Cache\RedisStore $store */
+            $store = Cache::store('redis');
+            $redis = $store->connection();
             $prefix = config('cache.prefix') ? config('cache.prefix') . ':' : '';
             $pattern = "{$prefix}user:{$userId}:tasks:*";
 
             $keys = $redis->keys($pattern);
-            if (!empty($keys)) {
+            if (! empty($keys)) {
                 // Remove the prefix from keys before deleting
                 $keysToDelete = array_map(function ($key) use ($prefix) {
                     return str_replace($prefix, '', $key);

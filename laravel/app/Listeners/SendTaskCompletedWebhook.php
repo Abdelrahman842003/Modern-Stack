@@ -55,7 +55,7 @@ class SendTaskCompletedWebhook implements ShouldQueue
             throw new \RuntimeException('Failed to encode payload to JSON');
         }
 
-        $signature = 'sha256=' . hash_hmac(
+        $signature = 'sha256='.hash_hmac(
             'sha256',
             $jsonPayload,
             config('services.webhook.secret')
@@ -95,7 +95,7 @@ class SendTaskCompletedWebhook implements ShouldQueue
                     ]);
 
                     // Throw exception to trigger queue retry
-                    throw new \RuntimeException('Webhook failed: ' . $response->body());
+                    throw new \RuntimeException('Webhook failed: '.$response->body());
                 }
 
                 Log::info('Webhook sent successfully', [
@@ -115,6 +115,7 @@ class SendTaskCompletedWebhook implements ShouldQueue
                     'user_id' => $task->user_id,
                     'circuit_breaker_status' => 'open',
                 ]);
+
                 // Don't retry if circuit is open
                 return;
             }
@@ -132,6 +133,7 @@ class SendTaskCompletedWebhook implements ShouldQueue
             // Don't throw in testing/local environments where webhook service might not be available
             if (app()->environment(['testing', 'local'])) {
                 Log::warning('Skipping webhook retry in local/testing environment');
+
                 return;
             }
 

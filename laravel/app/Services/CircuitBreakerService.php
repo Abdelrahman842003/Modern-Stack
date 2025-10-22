@@ -7,8 +7,11 @@ use Illuminate\Support\Facades\Cache;
 class CircuitBreakerService
 {
     private string $serviceName;
+
     private int $failureThreshold;
+
     private int $successThreshold;
+
     private int $timeout;
 
     public function __construct(
@@ -25,6 +28,8 @@ class CircuitBreakerService
 
     /**
      * Execute a callable with circuit breaker protection
+     *
+     * @return mixed
      */
     public function call(callable $callback)
     {
@@ -42,6 +47,7 @@ class CircuitBreakerService
         try {
             $result = $callback();
             $this->onSuccess();
+
             return $result;
         } catch (\Exception $e) {
             $this->onFailure();
@@ -104,7 +110,7 @@ class CircuitBreakerService
     {
         $lastFailureTime = Cache::get($this->getLastFailureTimeKey());
 
-        if (!$lastFailureTime) {
+        if (! $lastFailureTime) {
             return true;
         }
 
@@ -119,6 +125,7 @@ class CircuitBreakerService
         $key = $this->getFailureCountKey();
         $count = Cache::get($key, 0) + 1;
         Cache::put($key, $count, 3600);
+
         return $count;
     }
 
@@ -130,6 +137,7 @@ class CircuitBreakerService
         $key = $this->getSuccessCountKey();
         $count = Cache::get($key, 0) + 1;
         Cache::put($key, $count, 3600);
+
         return $count;
     }
 

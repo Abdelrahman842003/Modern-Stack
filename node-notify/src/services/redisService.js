@@ -14,7 +14,7 @@ const redis = new Redis({
 });
 
 // Event handlers
-redis.on('error', (err) => {
+redis.on('error', (_err) => {
   // Silent error handling
 });
 
@@ -27,16 +27,16 @@ async function saveNotification(notification) {
   try {
     const key = `notification:${notification.id}`;
     const userKey = `notifications:user:${notification.userId}`;
-    
+
     // Store notification data (expires in 30 days)
     await redis.setex(key, 30 * 24 * 60 * 60, JSON.stringify(notification));
-    
+
     // Add to user's sorted set (sorted by timestamp)
     await redis.zadd(userKey, Date.now(), notification.id.toString());
-    
+
     // Set expiry on user's notification list
     await redis.expire(userKey, 30 * 24 * 60 * 60);
-    
+
     return true;
   } catch (error) {
     return false;
@@ -55,14 +55,14 @@ async function getNotifications(userId, page = 1, limit = 10) {
     const userKey = `notifications:user:${userId}`;
     const start = (page - 1) * limit;
     const end = start + limit - 1;
-    
+
     // Get notification IDs from sorted set (newest first)
     const notificationIds = await redis.zrevrange(userKey, start, end);
-    
+
     if (notificationIds.length === 0) {
       return [];
     }
-    
+
     // Get all notifications
     const notifications = await Promise.all(
       notificationIds.map(async (id) => {
@@ -70,9 +70,9 @@ async function getNotifications(userId, page = 1, limit = 10) {
         return data ? JSON.parse(data) : null;
       })
     );
-    
+
     // Filter out null values (expired notifications)
-    return notifications.filter(n => n !== null);
+    return notifications.filter((n) => n !== null);
   } catch (error) {
     return [];
   }
@@ -103,13 +103,13 @@ async function deleteNotification(notificationId, userId) {
   try {
     const key = `notification:${notificationId}`;
     const userKey = `notifications:user:${userId}`;
-    
+
     // Delete notification data
     await redis.del(key);
-    
+
     // Remove from user's sorted set
     await redis.zrem(userKey, notificationId.toString());
-    
+
     return true;
   } catch (error) {
     return false;
@@ -124,21 +124,21 @@ async function deleteNotification(notificationId, userId) {
 async function deleteAllNotifications(userId) {
   try {
     const userKey = `notifications:user:${userId}`;
-    
+
     // Get all notification IDs
     const notificationIds = await redis.zrange(userKey, 0, -1);
-    
+
     if (notificationIds.length === 0) {
       return 0;
     }
-    
+
     // Delete all notifications
-    const keys = notificationIds.map(id => `notification:${id}`);
+    const keys = notificationIds.map((id) => `notification:${id}`);
     await redis.del(...keys);
-    
+
     // Delete user's sorted set
     await redis.del(userKey);
-    
+
     return notificationIds.length;
   } catch (error) {
     return 0;
@@ -155,14 +155,14 @@ async function updateNotification(notificationId, updates) {
   try {
     const key = `notification:${notificationId}`;
     const data = await redis.get(key);
-    
+
     if (!data) {
       return null;
     }
-    
+
     const notification = JSON.parse(data);
     const updatedNotification = { ...notification, ...updates };
-    
+
     // Get remaining TTL and preserve it
     const ttl = await redis.ttl(key);
     if (ttl > 0) {
@@ -170,7 +170,7 @@ async function updateNotification(notificationId, updates) {
     } else {
       await redis.set(key, JSON.stringify(updatedNotification));
     }
-    
+
     return updatedNotification;
   } catch (error) {
     return null;

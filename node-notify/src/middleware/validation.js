@@ -11,7 +11,7 @@ const notificationSchema = Joi.object({
       'number.positive': 'userId must be positive',
       'any.required': 'userId is required',
     }),
-  
+
   taskId: Joi.number().integer().positive().required()
     .messages({
       'number.base': 'taskId must be a number',
@@ -19,7 +19,7 @@ const notificationSchema = Joi.object({
       'number.positive': 'taskId must be positive',
       'any.required': 'taskId is required',
     }),
-  
+
   message: Joi.string().min(1).max(500).required()
     .messages({
       'string.base': 'message must be a string',
@@ -28,7 +28,7 @@ const notificationSchema = Joi.object({
       'string.max': 'message cannot exceed 500 characters',
       'any.required': 'message is required',
     }),
-  
+
   timestamp: Joi.string().isoDate().required()
     .messages({
       'string.base': 'timestamp must be a string',
@@ -47,7 +47,7 @@ const validateNotification = (req, res, next) => {
   });
 
   if (error) {
-    const errors = error.details.map(detail => ({
+    const errors = error.details.map((detail) => ({
       field: detail.path.join('.'),
       message: detail.message,
     }));
@@ -76,15 +76,16 @@ const queryParamsSchema = Joi.object({
       'number.integer': 'page must be an integer',
       'number.min': 'page must be at least 1',
     }),
-  
-  limit: Joi.number().integer().min(1).max(100).default(10)
+
+  limit: Joi.number().integer().min(1).max(100)
+    .default(10)
     .messages({
       'number.base': 'limit must be a number',
       'number.integer': 'limit must be an integer',
       'number.min': 'limit must be at least 1',
       'number.max': 'limit cannot exceed 100',
     }),
-  
+
   status: Joi.string().valid('read', 'unread').optional()
     .messages({
       'string.base': 'status must be a string',
@@ -102,7 +103,7 @@ const validateQueryParams = (req, res, next) => {
   });
 
   if (error) {
-    const errors = error.details.map(detail => ({
+    const errors = error.details.map((detail) => ({
       field: detail.path.join('.'),
       message: detail.message,
     }));

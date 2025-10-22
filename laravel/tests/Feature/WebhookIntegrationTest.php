@@ -66,7 +66,7 @@ class WebhookIntegrationTest extends TestCase
         ];
 
         $jsonPayload = json_encode($payload);
-        $validSignature = 'sha256=' . hash_hmac(
+        $validSignature = 'sha256='.hash_hmac(
             'sha256',
             $jsonPayload,
             config('services.webhook.secret')
@@ -99,7 +99,7 @@ class WebhookIntegrationTest extends TestCase
         $response->assertOk();
 
         // Verify webhook was sent
-        Http::assertSent(function ($request) use ($task) {
+        Http::assertSent(function ($request) {
             return $request->url() === 'http://node-notify:3001/notify'
                 && $request->hasHeader('X-Signature');
         });

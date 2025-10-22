@@ -83,7 +83,7 @@ const verifyToken = async (req, res, next) => {
   try {
     // Verify token with Laravel API
     const response = await axios.get(`${LARAVEL_API_URL}/api/auth/me`, {
-      headers: { 
+      headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json'
       }
@@ -107,7 +107,7 @@ const verifyToken = async (req, res, next) => {
 // Health check
 app.get('/health', async (req, res) => {
   const redisHealthy = await redisService.healthCheck();
-  
+
   res.json({
     status: redisHealthy ? 'OK' : 'DEGRADED',
     timestamp: new Date().toISOString(),
@@ -127,21 +127,21 @@ app.post('/notify', webhookLimiter, verifySignature, validateNotification, async
     // Idempotency check: prevent duplicate notifications for the same task completion
     const idempotencyKey = `webhook:${userId}:${taskId}:${timestamp}`;
     const exists = await redisService.redis.get(idempotencyKey);
-    
+
     if (exists) {
       // Duplicate webhook detected, return success without creating notification
       return res.status(200).json({
         message: 'Notification already processed (duplicate webhook)',
-        notificationId: parseInt(exists),
+        notificationId: parseInt(exists, 10),
       });
     }
-    
+
     // Generate unique notification ID
     const notificationId = await redisService.generateNotificationId();
-    
+
     // Store idempotency key (expires in 10 minutes)
     await redisService.redis.setex(idempotencyKey, 600, notificationId.toString());
-    
+
     // Create notification object
     const notification = {
       id: notificationId,
@@ -185,21 +185,21 @@ app.post('/notify', webhookLimiter, verifySignature, validateNotification, async
 // Get all notifications (Protected with rate limiting and validation)
 app.get('/notifications', notificationLimiter, verifyToken, validateQueryParams, async (req, res) => {
   const { page, limit, status } = req.query;
-  
+
   try {
     // Get notifications from Redis
     let userNotifications = await redisService.getNotifications(req.user.id, page, limit);
-    
+
     // Filter by status if provided
     if (status) {
       userNotifications = userNotifications.filter(
-        n => (status === 'read' && n.isRead) || (status === 'unread' && !n.isRead)
+        (n) => (status === 'read' && n.isRead) || (status === 'unread' && !n.isRead)
       );
     }
-    
+
     // Get total count
     const total = await redisService.getNotificationCount(req.user.id);
-    
+
     res.json({
       data: userNotifications,
       meta: {
@@ -222,10 +222,10 @@ app.get('/notifications', notificationLimiter, verifyToken, validateQueryParams,
 // Get notification by ID (Protected with validation)
 app.get('/notifications/:id', notificationLimiter, verifyToken, validateIdParam, async (req, res) => {
   const { id } = req.params;
-  
+
   try {
     const notification = await redisService.getNotificationById(id);
-    
+
     if (!notification) {
       return res.status(404).json({
         error: {
@@ -234,7 +234,7 @@ app.get('/notifications/:id', notificationLimiter, verifyToken, validateIdParam,
         },
       });
     }
-    
+
     // Check if notification belongs to the authenticated user
     if (notification.userId !== req.user.id) {
       return res.status(403).json({
@@ -244,7 +244,7 @@ app.get('/notifications/:id', notificationLimiter, verifyToken, validateIdParam,
         },
       });
     }
-    
+
     res.json({
       data: notification,
     });
@@ -262,7 +262,7 @@ app.get('/notifications/:id', notificationLimiter, verifyToken, validateIdParam,
 app.delete('/notifications', notificationLimiter, verifyToken, async (req, res) => {
   try {
     const count = await redisService.deleteAllNotifications(req.user.id);
-    
+
     res.json({
       message: `${count} notification(s) deleted successfully`,
       data: {
@@ -282,11 +282,11 @@ app.delete('/notifications', notificationLimiter, verifyToken, async (req, res) 
 // Delete notification by ID (Protected with validation)
 app.delete('/notifications/:id', notificationLimiter, verifyToken, validateIdParam, async (req, res) => {
   const { id } = req.params;
-  
+
   try {
     // Get notification first to check ownership
     const notification = await redisService.getNotificationById(id);
-    
+
     if (!notification) {
       return res.status(404).json({
         error: {
@@ -295,7 +295,7 @@ app.delete('/notifications/:id', notificationLimiter, verifyToken, validateIdPar
         },
       });
     }
-    
+
     // Check ownership
     if (notification.userId !== req.user.id) {
       return res.status(403).json({
@@ -305,10 +305,10 @@ app.delete('/notifications/:id', notificationLimiter, verifyToken, validateIdPar
         },
       });
     }
-    
+
     // Delete notification
     await redisService.deleteNotification(id, req.user.id);
-    
+
     res.json({
       message: 'Notification deleted successfully',
       data: notification,
@@ -326,10 +326,10 @@ app.delete('/notifications/:id', notificationLimiter, verifyToken, validateIdPar
 // Mark notification as read (Protected with validation)
 app.patch('/notifications/:id/read', notificationLimiter, verifyToken, validateIdParam, async (req, res) => {
   const { id } = req.params;
-  
+
   try {
     const notification = await redisService.getNotificationById(id);
-    
+
     if (!notification) {
       return res.status(404).json({
         error: {
@@ -338,7 +338,7 @@ app.patch('/notifications/:id/read', notificationLimiter, verifyToken, validateI
         },
       });
     }
-    
+
     // Check ownership
     if (notification.userId !== req.user.id) {
       return res.status(403).json({
@@ -348,14 +348,14 @@ app.patch('/notifications/:id/read', notificationLimiter, verifyToken, validateI
         },
       });
     }
-    
+
     // Update notification
     const updatedNotification = await redisService.updateNotification(id, {
       isRead: true,
       status: 'read',
       readAt: new Date().toISOString(),
     });
-    
+
     res.json({
       message: 'Notification marked as read',
       data: updatedNotification,
