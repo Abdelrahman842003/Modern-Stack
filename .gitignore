@@ -2,6 +2,16 @@
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
+.webhook_secret
+*.pem
+*.key
+
+# Sensitive configuration
+config/secrets.yml
+secrets/
+credentials/
 
 # Dependencies
 node_modules/

@@ -4,19 +4,36 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const crypto = require('crypto');
+const axios = require('axios');
+
+// Import services and middleware
+const redisService = require('./services/redisService');
+const { globalLimiter, notificationLimiter, webhookLimiter } = require('./middleware/rateLimiter');
+const { validateNotification, validateQueryParams, validateIdParam } = require('./middleware/validation');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'your-secret-key-here';
-
-// In-memory storage for notifications
-const notifications = [];
+const LARAVEL_API_URL = process.env.LARAVEL_API_URL || 'http://laravel-app:8000';
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+}));
 app.use(cors());
 app.use(morgan('combined'));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(globalLimiter); // Apply global rate limiting
 
 // Signature verification middleware
 const verifySignature = (req, res, next) => {
@@ -38,10 +55,6 @@ const verifySignature = (req, res, next) => {
     .digest('hex')}`;
 
   if (signature !== expectedSignature) {
-    console.error('Invalid signature:', {
-      received: signature,
-      expected: expectedSignature
-    });
     return res.status(401).json({
       error: {
         code: 'INVALID_SIGNATURE',
@@ -53,165 +66,293 @@ const verifySignature = (req, res, next) => {
   next();
 };
 
+// Laravel Token verification middleware
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.replace('Bearer ', '');
+
+  if (!token) {
+    return res.status(401).json({
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'Authentication token required'
+      }
+    });
+  }
+
+  try {
+    // Verify token with Laravel API
+    const response = await axios.get(`${LARAVEL_API_URL}/api/auth/me`, {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
+    });
+
+    // Save user data to request
+    req.user = response.data.data;
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      error: {
+        code: 'INVALID_TOKEN',
+        message: 'Invalid or expired authentication token'
+      }
+    });
+  }
+};
+
 // Routes
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  const redisHealthy = await redisService.healthCheck();
+  
   res.json({
-    status: 'OK',
+    status: redisHealthy ? 'OK' : 'DEGRADED',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     service: 'task-notification-service',
+    redis: redisHealthy ? 'connected' : 'disconnected',
   });
 });
 
-// Receive notification
-app.post('/notify', verifySignature, (req, res) => {
+// Receive notification (with rate limiting and validation)
+app.post('/notify', webhookLimiter, verifySignature, validateNotification, async (req, res) => {
   const {
     userId, taskId, message, timestamp
   } = req.body;
 
-  // Validation
-  if (!userId || !taskId || !message || !timestamp) {
-    return res.status(400).json({
+  try {
+    // Generate unique notification ID
+    const notificationId = await redisService.generateNotificationId();
+    
+    // Create notification object
+    const notification = {
+      id: notificationId,
+      userId,
+      taskId,
+      message,
+      timestamp,
+      status: 'unread',
+      isRead: false,
+      receivedAt: new Date().toISOString(),
+    };
+
+    // Save to Redis
+    const saved = await redisService.saveNotification(notification);
+
+    if (!saved) {
+      return res.status(500).json({
+        error: {
+          code: 'STORAGE_ERROR',
+          message: 'Failed to save notification',
+        },
+      });
+    }
+
+    res.status(201).json({
+      data: {
+        message: 'Notification received successfully',
+        notification_id: notification.id,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
       error: {
-        code: 'INVALID_PAYLOAD',
-        message: 'Missing required fields: userId, taskId, message, timestamp',
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to process notification',
       },
     });
   }
-
-  // Store notification
-  const notification = {
-    id: notifications.length + 1,
-    userId,
-    taskId,
-    message,
-    timestamp,
-    received_at: new Date().toISOString(),
-  };
-
-  notifications.push(notification);
-
-  console.log('✅ Notification received:', notification);
-
-  res.status(201).json({
-    data: {
-      message: 'Notification received successfully',
-      notification_id: notification.id,
-    },
-  });
 });
 
-// Get all notifications
-app.get('/notifications', (req, res) => {
-  const { userId, status } = req.query;
+// Get all notifications (Protected with rate limiting and validation)
+app.get('/notifications', notificationLimiter, verifyToken, validateQueryParams, async (req, res) => {
+  const { page, limit, status } = req.query;
   
-  let filteredNotifications = notifications;
-  
-  // Filter by userId if provided
-  if (userId) {
-    filteredNotifications = filteredNotifications.filter(
-      n => n.userId == userId
-    );
-  }
-  
-  // Filter by status if provided
-  if (status) {
-    filteredNotifications = filteredNotifications.filter(
-      n => n.status === status
-    );
-  }
-  
-  res.json({
-    data: filteredNotifications,
-    meta: {
-      total: filteredNotifications.length
+  try {
+    // Get notifications from Redis
+    let userNotifications = await redisService.getNotifications(req.user.id, page, limit);
+    
+    // Filter by status if provided
+    if (status) {
+      userNotifications = userNotifications.filter(
+        n => (status === 'read' && n.isRead) || (status === 'unread' && !n.isRead)
+      );
     }
-  });
-});
-
-// Get notification by ID
-app.get('/notifications/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const notification = notifications.find(n => n.id === id);
-  
-  if (!notification) {
-    return res.status(404).json({
+    
+    // Get total count
+    const total = await redisService.getNotificationCount(req.user.id);
+    
+    res.json({
+      data: userNotifications,
+      meta: {
+        total,
+        page,
+        limit,
+        user_id: req.user.id,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
       error: {
-        code: 'NOT_FOUND',
-        message: 'Notification not found'
-      }
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to fetch notifications',
+      },
     });
   }
-  
-  res.json({
-    data: notification
-  });
 });
 
-// Delete all notifications
-app.delete('/notifications', (req, res) => {
-  const count = notifications.length;
-  notifications.length = 0;  // Clear array
+// Get notification by ID (Protected with validation)
+app.get('/notifications/:id', notificationLimiter, verifyToken, validateIdParam, async (req, res) => {
+  const { id } = req.params;
   
-  console.log(`🗑️  Deleted ${count} notifications`);
-  
-  res.json({
-    data: {
+  try {
+    const notification = await redisService.getNotificationById(id);
+    
+    if (!notification) {
+      return res.status(404).json({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Notification not found',
+        },
+      });
+    }
+    
+    // Check if notification belongs to the authenticated user
+    if (notification.userId !== req.user.id) {
+      return res.status(403).json({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to access this notification',
+        },
+      });
+    }
+    
+    res.json({
+      data: notification,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to fetch notification',
+      },
+    });
+  }
+});
+
+// Delete all notifications for authenticated user (Protected)
+app.delete('/notifications', notificationLimiter, verifyToken, async (req, res) => {
+  try {
+    const count = await redisService.deleteAllNotifications(req.user.id);
+    
+    res.json({
       message: `${count} notification(s) deleted successfully`,
-      deleted_count: count
-    }
-  });
-});
-
-// Delete notification by ID
-app.delete('/notifications/:id', (req, res) => {
-  const id = parseInt(req.params.id);
-  const index = notifications.findIndex(n => n.id === id);
-  
-  if (index === -1) {
-    return res.status(404).json({
+      data: {
+        deleted_count: count,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
       error: {
-        code: 'NOT_FOUND',
-        message: 'Notification not found'
-      }
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to delete notifications',
+      },
     });
   }
+});
+
+// Delete notification by ID (Protected with validation)
+app.delete('/notifications/:id', notificationLimiter, verifyToken, validateIdParam, async (req, res) => {
+  const { id } = req.params;
   
-  const deleted = notifications.splice(index, 1)[0];
-  console.log(`🗑️  Deleted notification #${id}`);
-  
-  res.json({
-    data: {
+  try {
+    // Get notification first to check ownership
+    const notification = await redisService.getNotificationById(id);
+    
+    if (!notification) {
+      return res.status(404).json({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Notification not found',
+        },
+      });
+    }
+    
+    // Check ownership
+    if (notification.userId !== req.user.id) {
+      return res.status(403).json({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to delete this notification',
+        },
+      });
+    }
+    
+    // Delete notification
+    await redisService.deleteNotification(id, req.user.id);
+    
+    res.json({
       message: 'Notification deleted successfully',
-      deleted: deleted
-    }
-  });
-});
-
-// Mark notification as read
-app.patch('/notifications/:id/read', (req, res) => {
-  const id = parseInt(req.params.id);
-  const notification = notifications.find(n => n.id === id);
-  
-  if (!notification) {
-    return res.status(404).json({
+      data: notification,
+    });
+  } catch (error) {
+    res.status(500).json({
       error: {
-        code: 'NOT_FOUND',
-        message: 'Notification not found'
-      }
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to delete notification',
+      },
     });
   }
+});
+
+// Mark notification as read (Protected with validation)
+app.patch('/notifications/:id/read', notificationLimiter, verifyToken, validateIdParam, async (req, res) => {
+  const { id } = req.params;
   
-  notification.status = 'read';
-  notification.read_at = new Date().toISOString();
-  
-  console.log(`✅ Notification #${id} marked as read`);
-  
-  res.json({
-    data: notification
-  });
+  try {
+    const notification = await redisService.getNotificationById(id);
+    
+    if (!notification) {
+      return res.status(404).json({
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Notification not found',
+        },
+      });
+    }
+    
+    // Check ownership
+    if (notification.userId !== req.user.id) {
+      return res.status(403).json({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to modify this notification',
+        },
+      });
+    }
+    
+    // Update notification
+    const updatedNotification = await redisService.updateNotification(id, {
+      isRead: true,
+      status: 'read',
+      readAt: new Date().toISOString(),
+    });
+    
+    res.json({
+      message: 'Notification marked as read',
+      data: updatedNotification,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to update notification',
+      },
+    });
+  }
 });
 
 // 404 handler
@@ -226,7 +367,6 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err, req, res, _next) => {
-  console.error('Error:', err);
   res.status(500).json({
     error: {
       code: 'INTERNAL_SERVER_ERROR',
@@ -238,8 +378,7 @@ app.use((err, req, res, _next) => {
 // Start server
 if (require.main === module) {
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Notification service running on port ${PORT}`);
-    console.log(`📡 Webhook secret: ${WEBHOOK_SECRET.substring(0, 10)}...`);
+    // Server started successfully
   });
 }
 
