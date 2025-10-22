@@ -124,8 +124,23 @@ app.post('/notify', webhookLimiter, verifySignature, validateNotification, async
   } = req.body;
 
   try {
+    // Idempotency check: prevent duplicate notifications for the same task completion
+    const idempotencyKey = `webhook:${userId}:${taskId}:${timestamp}`;
+    const exists = await redisService.redis.get(idempotencyKey);
+    
+    if (exists) {
+      // Duplicate webhook detected, return success without creating notification
+      return res.status(200).json({
+        message: 'Notification already processed (duplicate webhook)',
+        notificationId: parseInt(exists),
+      });
+    }
+    
     // Generate unique notification ID
     const notificationId = await redisService.generateNotificationId();
+    
+    // Store idempotency key (expires in 10 minutes)
+    await redisService.redis.setex(idempotencyKey, 600, notificationId.toString());
     
     // Create notification object
     const notification = {
