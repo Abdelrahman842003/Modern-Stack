@@ -670,57 +670,6 @@
 					"response": []
 				}
 			]
-		},
-		{
-			"name": "Health Checks",
-			"item": [
-				{
-					"name": "Laravel API Health",
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "{{baseUrl}}/api/health",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"health"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Node.js Service Health",
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{nodeUrl}}/health",
-							"host": [
-								"{{nodeUrl}}"
-							],
-							"path": [
-								"health"
-							]
-						}
-					},
-					"response": []
-				}
-			]
 		}
 	]
 }

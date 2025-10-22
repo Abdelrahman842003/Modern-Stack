@@ -160,33 +160,6 @@ class WebhookIntegrationTest extends TestCase
         $this->assertTrue(true); // Test passes if no exception
     }
 
-    public function test_health_check_detailed_endpoint(): void
-    {
-        $response = $this->getJson('/api/health/detailed');
-
-        // Accept both 200 (healthy) and 503 (unhealthy) as valid responses
-        $this->assertContains($response->status(), [200, 503]);
-
-        $response->assertJsonStructure([
-            'status',
-            'timestamp',
-            'service',
-            'checks' => [
-                'database',
-                'redis',
-                'queue',
-                'disk_space',
-            ],
-        ]);
-
-        // Database should always be working in tests
-        $response->assertJson([
-            'checks' => [
-                'database' => true,
-            ],
-        ]);
-    }
-
     public function test_cache_invalidation_on_task_update(): void
     {
         $user = User::factory()->create();
