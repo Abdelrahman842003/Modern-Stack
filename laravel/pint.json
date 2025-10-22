@@ -11,6 +11,9 @@
         "ordered_imports": {
             "sort_algorithm": "alpha"
         },
-        "not_operator_with_successor_space": true
+        "not_operator_with_successor_space": true,
+        "concat_space": {
+            "spacing": "one"
+        }
     }
 }

@@ -454,7 +454,7 @@ class TaskController extends Controller
             /** @var \Illuminate\Cache\RedisStore $store */
             $store = Cache::store('redis');
             $redis = $store->connection();
-            $prefix = config('cache.prefix') ? config('cache.prefix').':' : '';
+            $prefix = config('cache.prefix') ? config('cache.prefix') . ':' : '';
             $pattern = "{$prefix}user:{$userId}:tasks:*";
 
             $keys = $redis->keys($pattern);

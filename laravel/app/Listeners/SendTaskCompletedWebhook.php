@@ -55,7 +55,7 @@ class SendTaskCompletedWebhook implements ShouldQueue
             throw new \RuntimeException('Failed to encode payload to JSON');
         }
 
-        $signature = 'sha256='.hash_hmac(
+        $signature = 'sha256=' . hash_hmac(
             'sha256',
             $jsonPayload,
             config('services.webhook.secret')
@@ -95,7 +95,7 @@ class SendTaskCompletedWebhook implements ShouldQueue
                     ]);
 
                     // Throw exception to trigger queue retry
-                    throw new \RuntimeException('Webhook failed: '.$response->body());
+                    throw new \RuntimeException('Webhook failed: ' . $response->body());
                 }
 
                 Log::info('Webhook sent successfully', [
