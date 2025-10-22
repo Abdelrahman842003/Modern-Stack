@@ -29,6 +29,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('/me', [AuthController::class, 'me'])->name('auth.me');
+        Route::get('/user', [AuthController::class, 'me'])->name('auth.user'); // Alias for /me
     });
 
     // Tasks routes
@@ -77,7 +78,7 @@ Route::get('/health/detailed', function () {
     try {
         $queueSize = Queue::size();
         $checks['queue'] = $queueSize < 1000; // Less than 1000 jobs pending
-        if (! $checks['queue']) {
+        if (!$checks['queue']) {
             $errors['queue'] = "Queue size too large: {$queueSize} jobs";
         }
     } catch (\Exception $e) {
@@ -88,7 +89,7 @@ Route::get('/health/detailed', function () {
     try {
         $freeSpace = disk_free_space('/');
         $checks['disk_space'] = $freeSpace > (1024 * 1024 * 1024); // > 1GB
-        if (! $checks['disk_space']) {
+        if (!$checks['disk_space']) {
             $freeSpaceGB = round($freeSpace / (1024 * 1024 * 1024), 2);
             $errors['disk_space'] = "Low disk space: {$freeSpaceGB}GB free";
         }
@@ -96,7 +97,7 @@ Route::get('/health/detailed', function () {
         $errors['disk_space'] = $e->getMessage();
     }
 
-    $healthy = ! in_array(false, $checks, true);
+    $healthy = !in_array(false, $checks, true);
 
     $response = [
         'status' => $healthy ? 'healthy' : 'unhealthy',
@@ -105,7 +106,7 @@ Route::get('/health/detailed', function () {
         'checks' => $checks,
     ];
 
-    if (! empty($errors)) {
+    if (!empty($errors)) {
         $response['errors'] = $errors;
     }
 

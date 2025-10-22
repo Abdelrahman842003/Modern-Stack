@@ -181,14 +181,14 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/api/auth/user",
+							"raw": "{{baseUrl}}/api/auth/me",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"api",
 								"auth",
-								"user"
+								"me"
 							]
 						}
 					},
